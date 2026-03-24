@@ -127,7 +127,10 @@ See [`.env.example`](.env.example) for all available configuration options.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `LOG_LEVEL` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 | `ENVIRONMENT` | `production` | `local`, `staging`, or `production` |
+| `API_PREFIX_STR` | `/api/v1` | API route prefix |
+| `PROJECT_NAME` | `CogniBrew Edge Gateway` | Application display name |
 | `S3_ENDPOINT_URL` | `http://rustfs:9000` | S3-compatible storage endpoint |
 | `S3_ACCESS_KEY` | `rustfsadmin` | S3 access key |
 | `S3_SECRET_KEY` | `rustfsadmin` | S3 secret key |
