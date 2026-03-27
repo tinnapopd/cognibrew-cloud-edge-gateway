@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
+from app.api.deps import S3Dep
 from app.crud.s3 import put_json
 from app.core.logger import Logger
 from app.models.schemas import BatchUpload, EnrollmentRequest, UploadResponse
@@ -10,14 +11,14 @@ router = APIRouter(prefix="/gateway", tags=["gateway"])
 
 
 @router.post("/batch", response_model=UploadResponse)
-async def receive_batch(payload: BatchUpload) -> UploadResponse:
+async def receive_batch(s3: S3Dep, payload: BatchUpload) -> UploadResponse:
     """Receive a daily batch of face-embedding vectors from an Edge device.
 
     Stores the entire batch as ``/{date}/{device_id}.json`` in S3.
     """
     s3_key = f"{payload.date}/{payload.device_id}.json"
     try:
-        put_json(s3_key, payload.model_dump())
+        put_json(s3, s3_key, payload.model_dump())
     except Exception as exc:
         logger.exception("Failed to store batch to S3")
         raise HTTPException(
@@ -31,7 +32,7 @@ async def receive_batch(payload: BatchUpload) -> UploadResponse:
 
 
 @router.post("/enroll", response_model=UploadResponse)
-async def enroll(payload: EnrollmentRequest) -> UploadResponse:
+async def enroll(s3: S3Dep, payload: EnrollmentRequest) -> UploadResponse:
     """Accept an initial enrollment embedding (baseline vector) from Edge.
 
     Stores under ``/enrollments/{username}/{device_id}.json``.
@@ -43,7 +44,7 @@ async def enroll(payload: EnrollmentRequest) -> UploadResponse:
         "device_id": payload.device_id,
     }
     try:
-        put_json(s3_key, data)
+        put_json(s3, s3_key, data)
     except Exception as exc:
         logger.exception("Failed to store enrollment to S3")
         raise HTTPException(

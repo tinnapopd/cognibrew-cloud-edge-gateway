@@ -4,6 +4,7 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
+from app.api.deps import get_s3_client
 from app.api.main import api_router
 from app.core.config import settings
 from app.core.logger import Logger
@@ -19,7 +20,8 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Startup: ensure the S3 bucket exists."""
-    ensure_bucket()
+    client = next(get_s3_client())
+    ensure_bucket(client)
     logger.info("Edge Gateway ready")
     yield
 
