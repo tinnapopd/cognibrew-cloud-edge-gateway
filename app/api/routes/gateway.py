@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import S3Dep
@@ -30,9 +31,7 @@ async def receive_batch(s3: S3Dep, payload: BatchUpload) -> UploadResponse:
         put_json(s3, s3_key, payload.model_dump())
     except Exception as exc:
         logger.exception("Failed to store batch to S3")
-        raise HTTPException(
-            status_code=502, detail=f"S3 write failed: {exc}"
-        ) from exc
+        raise HTTPException(status_code=502, detail=f"S3 write failed: {exc}") from exc
 
     return UploadResponse(
         s3_key=s3_key,
@@ -44,14 +43,13 @@ async def receive_batch(s3: S3Dep, payload: BatchUpload) -> UploadResponse:
 
 
 @router.post("/create_faces", response_model=UploadResponse)
-async def create_faces(
-    s3: S3Dep, payload: CreateFacesRequest
-) -> UploadResponse:
+async def create_faces(s3: S3Dep, payload: CreateFacesRequest) -> UploadResponse:
     """Create (enroll) a baseline face-embedding vector.
 
-    Stores under ``/enrollments/{username}/{device_id}.json``.
+    Stores under ``/enrollments/{username}/{device_id}/{uuid}.json``.
     """
-    s3_key = f"enrollments/{payload.username}/{payload.device_id}.json"
+    face_id = uuid.uuid4().hex
+    s3_key = f"enrollments/{payload.username}/{payload.device_id}/{face_id}.json"
     data = {
         "username": payload.username,
         "embedding": payload.embedding,
@@ -61,9 +59,7 @@ async def create_faces(
         put_json(s3, s3_key, data)
     except Exception as exc:
         logger.exception("Failed to store face to S3")
-        raise HTTPException(
-            status_code=502, detail=f"S3 write failed: {exc}"
-        ) from exc
+        raise HTTPException(status_code=502, detail=f"S3 write failed: {exc}") from exc
 
     return UploadResponse(s3_key=s3_key, record_count=1)
 
@@ -76,16 +72,15 @@ async def get_faces(s3: S3Dep, payload: GetFacesRequest) -> GetFacesResponse:
     Otherwise **all** face records for the user are returned.
     """
     if payload.device_id:
-        keys = [f"enrollments/{payload.username}/{payload.device_id}.json"]
+        prefix = f"enrollments/{payload.username}/{payload.device_id}/"
     else:
         prefix = f"enrollments/{payload.username}/"
-        try:
-            keys = list_keys(s3, prefix)
-        except Exception as exc:
-            logger.exception("Failed to list faces from S3")
-            raise HTTPException(
-                status_code=502, detail=f"S3 read failed: {exc}"
-            ) from exc
+
+    try:
+        keys = list_keys(s3, prefix)
+    except Exception as exc:
+        logger.exception("Failed to list faces from S3")
+        raise HTTPException(status_code=502, detail=f"S3 read failed: {exc}") from exc
 
     faces: list[FaceRecord] = []
     for key in keys:
@@ -114,27 +109,24 @@ async def get_faces(s3: S3Dep, payload: GetFacesRequest) -> GetFacesResponse:
 
 
 @router.post("/delete_faces", response_model=DeleteFacesResponse)
-async def delete_faces(
-    s3: S3Dep, payload: DeleteFacesRequest
-) -> DeleteFacesResponse:
+async def delete_faces(s3: S3Dep, payload: DeleteFacesRequest) -> DeleteFacesResponse:
     """Delete enrolled face records for a user.
 
     If ``device_id`` is provided, only that specific record is deleted.
     Otherwise **all** face records for the user are removed.
     """
     if payload.device_id:
-        # Delete a single specific face
-        keys = [f"enrollments/{payload.username}/{payload.device_id}.json"]
+        # Delete faces for a specific device
+        prefix = f"enrollments/{payload.username}/{payload.device_id}/"
     else:
         # Delete all faces for the user
         prefix = f"enrollments/{payload.username}/"
-        try:
-            keys = list_keys(s3, prefix)
-        except Exception as exc:
-            logger.exception("Failed to list faces for deletion")
-            raise HTTPException(
-                status_code=502, detail=f"S3 read failed: {exc}"
-            ) from exc
+
+    try:
+        keys = list_keys(s3, prefix)
+    except Exception as exc:
+        logger.exception("Failed to list faces for deletion")
+        raise HTTPException(status_code=502, detail=f"S3 read failed: {exc}") from exc
 
     if not keys:
         raise HTTPException(
@@ -146,8 +138,6 @@ async def delete_faces(
         deleted = delete_keys(s3, keys)
     except Exception as exc:
         logger.exception("Failed to delete faces from S3")
-        raise HTTPException(
-            status_code=502, detail=f"S3 delete failed: {exc}"
-        ) from exc
+        raise HTTPException(status_code=502, detail=f"S3 delete failed: {exc}") from exc
 
     return DeleteFacesResponse(deleted_count=deleted)
