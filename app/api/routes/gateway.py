@@ -66,15 +66,8 @@ async def create_faces(s3: S3Dep, payload: CreateFacesRequest) -> UploadResponse
 
 @router.post("/get_faces", response_model=GetFacesResponse)
 async def get_faces(s3: S3Dep, payload: GetFacesRequest) -> GetFacesResponse:
-    """Retrieve enrolled face records for a given username.
-
-    If ``device_id`` is provided, only that specific record is returned.
-    Otherwise **all** face records for the user are returned.
-    """
-    if payload.device_id:
-        prefix = f"enrollments/{payload.username}/{payload.device_id}/"
-    else:
-        prefix = f"enrollments/{payload.username}/"
+    """Retrieve enrolled face records for a given username and device_id."""
+    prefix = f"enrollments/{payload.username}/{payload.device_id}/"
 
     try:
         keys = list_keys(s3, prefix)
@@ -110,23 +103,19 @@ async def get_faces(s3: S3Dep, payload: GetFacesRequest) -> GetFacesResponse:
 
 @router.post("/delete_faces", response_model=DeleteFacesResponse)
 async def delete_faces(s3: S3Dep, payload: DeleteFacesRequest) -> DeleteFacesResponse:
-    """Delete enrolled face records for a user.
-
-    If ``device_id`` is provided, only that specific record is deleted.
-    Otherwise **all** face records for the user are removed.
-    """
-    if payload.device_id:
+    """Delete enrolled face records for a user and device_id."""
+    s3_key = getattr(payload, "s3_key", None)
+    if s3_key:
+        keys: list[str] = [str(s3_key)]
+    else:
         # Delete faces for a specific device
         prefix = f"enrollments/{payload.username}/{payload.device_id}/"
-    else:
-        # Delete all faces for the user
-        prefix = f"enrollments/{payload.username}/"
-
-    try:
-        keys = list_keys(s3, prefix)
-    except Exception as exc:
-        logger.exception("Failed to list faces for deletion")
-        raise HTTPException(status_code=502, detail=f"S3 read failed: {exc}") from exc
+    
+        try:
+            keys = list_keys(s3, prefix)
+        except Exception as exc:
+            logger.exception("Failed to list faces for deletion")
+            raise HTTPException(status_code=502, detail=f"S3 read failed: {exc}") from exc
 
     if not keys:
         raise HTTPException(

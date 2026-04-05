@@ -33,17 +33,16 @@ class CreateFacesRequest(BaseModel):
 
     username: str
     embedding: list[float] = Field(..., min_length=512, max_length=512)
-    device_id: str = Field("manual", description="Source device or 'manual'")
+    device_id: str = Field(..., description="Source device")
 
 
 class GetFacesRequest(BaseModel):
     """Request to retrieve enrolled face records."""
 
     username: str = Field(..., description="Username whose faces to retrieve")
-    device_id: str | None = Field(
-        None,
-        description="Specific device_id to retrieve. If omitted, "
-        + "returns all faces for the user.",
+    device_id: str = Field(
+        ...,
+        description="Specific device_id to retrieve faces for.",
     )
 
 
@@ -51,9 +50,13 @@ class DeleteFacesRequest(BaseModel):
     """Request to delete enrolled face records."""
 
     username: str = Field(..., description="Username whose faces to delete")
-    device_id: str | None = Field(
+    device_id: str = Field(
+        ...,
+        description="Specific device_id to delete faces for.",
+    )
+    s3_key: str | None = Field(
         None,
-        description="Specific device_id to delete. If omitted, deletes all faces for the user.",
+        description="Specific S3 key of the face to delete.",
     )
 
 
