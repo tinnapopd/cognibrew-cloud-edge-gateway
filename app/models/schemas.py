@@ -28,12 +28,33 @@ class BatchUpload(BaseModel):
     )
 
 
-class EnrollmentRequest(BaseModel):
-    """Initial enrollment of a baseline face vector."""
+class CreateFacesRequest(BaseModel):
+    """Request to create (enroll) a baseline face vector."""
 
     username: str
     embedding: list[float] = Field(..., min_length=512, max_length=512)
     device_id: str = Field("manual", description="Source device or 'manual'")
+
+
+class GetFacesRequest(BaseModel):
+    """Request to retrieve enrolled face records."""
+
+    username: str = Field(..., description="Username whose faces to retrieve")
+    device_id: str | None = Field(
+        None,
+        description="Specific device_id to retrieve. If omitted, "
+        + "returns all faces for the user.",
+    )
+
+
+class DeleteFacesRequest(BaseModel):
+    """Request to delete enrolled face records."""
+
+    username: str = Field(..., description="Username whose faces to delete")
+    device_id: str | None = Field(
+        None,
+        description="Specific device_id to delete. If omitted, deletes all faces for the user.",
+    )
 
 
 class UploadResponse(BaseModel):
@@ -42,3 +63,28 @@ class UploadResponse(BaseModel):
     status: str = "ok"
     s3_key: str = Field(..., description="Object key in S3")
     record_count: int = Field(0, description="Number of records stored")
+
+
+class FaceRecord(BaseModel):
+    """A single enrolled face record."""
+
+    s3_key: str
+    username: str
+    embedding: list[float]
+    device_id: str
+
+
+class GetFacesResponse(BaseModel):
+    """Response for the get_faces endpoint."""
+
+    status: str = "ok"
+    username: str
+    faces: list[FaceRecord] = Field(default_factory=list)
+    count: int = 0
+
+
+class DeleteFacesResponse(BaseModel):
+    """Response for the delete_faces endpoint."""
+
+    status: str = "ok"
+    deleted_count: int = 0

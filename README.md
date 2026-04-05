@@ -7,7 +7,9 @@ Receives daily batch face-embedding vectors from Edge devices, validates payload
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/api/v1/gateway/batch` | Receive daily batch of face-embedding vectors |
-| `POST` | `/api/v1/gateway/enroll` | Enroll a new customer's baseline face vector |
+| `POST` | `/api/v1/gateway/create_faces` | Enroll a new baseline face vector |
+| `POST` | `/api/v1/gateway/get_faces` | Retrieve enrolled face records (all or by device) |
+| `POST` | `/api/v1/gateway/delete_faces` | Delete enrolled face records (all or by device) |
 | `GET` | `/api/v1/utils/health-check/` | Health check |
 
 ### Batch Upload
@@ -21,23 +23,51 @@ curl -X POST http://localhost:8000/api/v1/gateway/batch \
     "vectors": [
       {
         "username": "alice",
-        "embedding": [0.1, 0.1, ...],  # 512-dim vector
+        "embedding": [0.1, 0.1, ...],
         "is_correct": true
       }
     ]
   }'
 ```
 
-### Enrollment
+### Create Faces (Enroll)
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/gateway/enroll \
+curl -X POST http://localhost:8000/api/v1/gateway/create_faces \
   -H "Content-Type: application/json" \
   -d '{
     "username": "bob",
-    "embedding": [0.2, 0.2, ...],  # 512-dim vector
+    "embedding": [0.2, 0.2, ...],
     "device_id": "edge-001"
   }'
+```
+
+### Get Faces
+
+```bash
+# Get all faces for a user
+curl -X POST http://localhost:8000/api/v1/gateway/get_faces \
+  -H "Content-Type: application/json" \
+  -d '{"username": "bob"}'
+
+# Get face for a specific device
+curl -X POST http://localhost:8000/api/v1/gateway/get_faces \
+  -H "Content-Type: application/json" \
+  -d '{"username": "bob", "device_id": "edge-001"}'
+```
+
+### Delete Faces
+
+```bash
+# Delete all faces for a user
+curl -X POST http://localhost:8000/api/v1/gateway/delete_faces \
+  -H "Content-Type: application/json" \
+  -d '{"username": "bob"}'
+
+# Delete face for a specific device
+curl -X POST http://localhost:8000/api/v1/gateway/delete_faces \
+  -H "Content-Type: application/json" \
+  -d '{"username": "bob", "device_id": "edge-001"}'
 ```
 
 ## Project Structure

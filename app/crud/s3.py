@@ -46,3 +46,26 @@ def list_keys(s3: Any, prefix: str) -> list[str]:
     """List all object keys under a given prefix."""
     resp = s3.list_objects_v2(Bucket=settings.S3_BUCKET_NAME, Prefix=prefix)
     return [obj["Key"] for obj in resp.get("Contents", [])]
+
+
+def delete_object(s3: Any, key: str) -> None:
+    """Delete a single object from S3."""
+    s3.delete_object(Bucket=settings.S3_BUCKET_NAME, Key=key)
+    logger.info("Deleted s3://%s/%s", settings.S3_BUCKET_NAME, key)
+
+
+def delete_keys(s3: Any, keys: list[str]) -> int:
+    """Delete multiple objects from S3. Returns count of deleted keys."""
+    if not keys:
+        return 0
+    objects = [{"Key": k} for k in keys]
+    s3.delete_objects(
+        Bucket=settings.S3_BUCKET_NAME,
+        Delete={"Objects": objects},
+    )
+    logger.info(
+        "Deleted %d objects from s3://%s",
+        len(keys),
+        settings.S3_BUCKET_NAME,
+    )
+    return len(keys)
